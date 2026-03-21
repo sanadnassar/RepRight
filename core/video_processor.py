@@ -112,6 +112,13 @@ def process_video(video_file, exercise, progress_callback):
             r_knee = [lm[26].x, lm[26].y]
             l_ankle = [lm[27].x, lm[27].y]
             r_ankle = [lm[28].x, lm[28].y]
+            l_heel = [lm[29].x, lm[29].y]
+            r_heel  = [lm[30].x, lm[30].y]
+            l_toe = [lm[31].x, lm[31].y]
+            r_toe = [lm[32].x, lm[32].y]
+
+            # Check if heel was lifted during squat
+            heel_lifted = (l_toe[1] - l_heel[1]) > 0.02 or (r_toe[1] - r_heel[1]) > 0.02
 
             # 1. Calculate the current angles
             k_ang = (calculate_angle(l_hip, l_knee, l_ankle) + calculate_angle(r_hip, r_knee, r_ankle)) / 2
@@ -123,6 +130,9 @@ def process_video(video_file, exercise, progress_callback):
                 [(l_hip[0] + r_hip[0]) / 2, (l_hip[1] + r_hip[1]) / 2], 
                 l_knee
             )
+
+            # Back is rounding reduces score
+            back_is_rounding = b_ang < 45
 
             # 2. State Machine for Rep Counting (Always runs)
             if k_ang < DEPTH_THRESHOLD and rep_state == "up": 
@@ -136,7 +146,7 @@ def process_video(video_file, exercise, progress_callback):
             # 4. THE GUARD: Only track stats if the user is actually in a rep
             # This ignores frames where the user is just standing straight (k_ang > 165)
             if k_ang < 165: 
-                label, score, confidence = predict_form(k_ang, h_ang, b_ang)
+                label, score, confidence, reasons = predict_form(k_ang, h_ang, b_ang, heel_lifted, back_is_rounding)
                 total_person_frames += 1
                 all_scores.append(score)
                 knee_angles.append(k_ang)

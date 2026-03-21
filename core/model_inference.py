@@ -49,5 +49,5 @@ def predict_form(knee_angle, hip_angle, back_angle, heel_lift_detected=False, ba
 
 #test
 if __name__ == "__main__":
-    label, score = predict_form(knee_angle=88, hip_angle=92, back_angle=60)
+    label, score = predict_form(88, 92, 60)
     print(f"Label: {label}, Score: {score}/100")
