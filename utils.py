@@ -59,3 +59,29 @@ def get_feedback(knee_angle, hip_angle, back_angle, label):
         verdict = "Needs work"
 
     return verdict + " | " + " | ".join(feedback)
+
+
+def detect_heel_lift(landmarks):
+    l_ankle = landmarks[27]
+    r_ankle = landmarks[28]
+    l_toe   = landmarks[31]
+    r_toe   = landmarks[32]
+
+    l_lift = (l_toe.y - l_ankle.y) > 0.04
+    r_lift = (r_toe.y - r_ankle.y) > 0.04
+
+    return l_lift or r_lift
+
+
+def detect_back_rounding(landmarks):
+    l_sh  = landmarks[11]
+    r_sh  = landmarks[12]
+    l_hip = landmarks[23]
+    r_hip = landmarks[24]
+
+    mid_shoulder_x = (l_sh.x  + r_sh.x)  / 2
+    mid_hip_x      = (l_hip.x + r_hip.x) / 2
+
+    # If shoulders are significantly forward of hips, back is rounding
+    forward_lean = mid_shoulder_x - mid_hip_x
+    return forward_lean > 0.08
