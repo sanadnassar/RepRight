@@ -8,3 +8,4 @@ Thumbs.db
 *.mov
 *.avi
 outputs/
+debug_mp.py

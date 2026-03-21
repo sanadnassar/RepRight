@@ -264,50 +264,49 @@ with left_col:
     
     st.write("") # Spacing
     
-# Process Button & Progress Logic
-    if st.button("PROCESS VIDEO"):
+    # Process Button & Progress Logic (Inside Left Column)
+    if st.button("PROCESS VIDEO", use_container_width=True):
         if uploaded_file is None:
             st.error("Please upload a video first!")
         else:
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # 1. The Callback: The engine will call this to update the UI
             def ui_updater(percent, message):
                 progress_bar.progress(percent)
                 status_text.text(message)
                 
             try:
-                # 2. The Handoff: We pass the file, the exercise type, and the UI updater.
-                # OCP applied: If we add new exercises or models later, this UI block NEVER changes.
-                final_video_path, analysis_stats = process_video(
+                # ---> THE CONNECTION HAPPENS HERE <---
+                # We call Aref's function and it returns the path to the annotated video + real stats
+                final_video_path, real_stats = process_video(
                     video_file=uploaded_file, 
                     exercise=squat_type, 
                     progress_callback=ui_updater
                 )
                 
-                # 3. Success State
-                status_text.text("Analysis Complete!")
-                time.sleep(0.5)
+                # Save everything to session state so the Right Column can use it
+                st.session_state['processed_video_path'] = final_video_path
+                st.session_state['form_stats'] = real_stats
                 st.session_state['video_processed'] = True
                 
-                # We save the results to session state so the Right Column can display them
-                st.session_state['processed_video_path'] = final_video_path
-                st.session_state['form_stats'] = analysis_stats
+                status_text.text("Analysis Complete!")
+                time.sleep(0.5)
                 
             except Exception as e:
-                # Catch any ML/OpenCV errors so the app doesn't crash during the demo
-                st.error(f"Engine Error: {str(e)}")
+                st.error(f"Processing Error: {str(e)}")
                 
             finally:
-                # Always clean up the UI, even if it fails
                 status_text.empty() 
                 progress_bar.empty() 
             
-    # Your invisible 80px spacer preventing layout shifts
+    # Invisible layout spacer
     st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
 
 
+# ==========================================
+# RIGHT COLUMN: ANALYSIS RESULTS
+# ==========================================
 # ==========================================
 # RIGHT COLUMN: ANALYSIS RESULTS
 # ==========================================
@@ -318,43 +317,43 @@ with right_col:
     </h2>
     """, unsafe_allow_html=True)
     
-    # Only show results if processing is done
     if 'video_processed' in st.session_state and st.session_state['video_processed']:
         
-        # 1. Top Metrics Row
+        # Pull the real data out of memory
+        stats = st.session_state['form_stats']
+        
+        # 1. Top Metrics Row (Updated to use dynamic keys)
         met_col1, met_col2, met_col3, met_col4, met_col5 = st.columns(5)
-        met_col1.metric("OVERALL SCORE", "94", "+6")
-        met_col2.metric("DEPTH", "100%", "Perfect")
-        met_col3.metric("BAR PATH", "98%", "Stable")
-        met_col4.metric("KNEE ALIGN", "91%", "-2%")
-        met_col5.metric("BACK ANGLE", "95%", "Good")
+        met_col1.metric("AVG SCORE", f"{stats['score']}/100")
+        met_col2.metric("REPS DETECTED", stats["reps"])
+        met_col3.metric("GOOD FORM", stats["good_pct"])
+        met_col4.metric("AVG KNEE", stats["avg_knee"])
+        met_col5.metric("AVG BACK", stats["avg_back"])
         
         # 2. Video Playback & Graph Row
         vid_col, graph_col = st.columns([1.5, 1])
         
         with vid_col:
-            st.markdown("**VIDEO PLAYBACK WITH FEEDBACK:**")
-            # For now, replay the uploaded video. Later, Aref's OpenCV output goes here!
-            st.video(uploaded_file)
+            st.markdown("**PROCESSED FOOTAGE:**")
             
-            # Timeline Annotations
-            st.markdown("**ANNOTATED TIMELINE**")
-            st.markdown("""
-                <span style='background-color:#004d4d; color:#00FFFF; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:03 Low Depth</span>
-                <span style='background-color:#4d4d00; color:#ffff00; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:12 Knee Cave</span>
-                <span style='background-color:#004d4d; color:#00FFFF; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:18 Great Depth</span>
-            """, unsafe_allow_html=True)
+            # ---> DISPLAYING THE OUTPUT VIDEO <---
+            # Streamlit reads the temporary file OpenCV just created
+            annotated_video = st.session_state['processed_video_path']
+            st.video(annotated_video)
+            
+            st.markdown("**SESSION NOTES**")
+            st.markdown(f"<span style='color:gray; font-size:14px;'>Target Exercise: {squat_type}</span>", unsafe_allow_html=True)
             
         with graph_col:
             st.markdown("**MY PROGRESS**")
             
-            # Create Dummy Data for the Plotly Graph
+            # (You can leave your Plotly dummy chart here for now, 
+            # or wire it up to a real CSV history later)
             df = pd.DataFrame({
-                "Date": ["Oct 7", "Oct 12", "Oct 19", "Oct 22", "Oct 26"],
-                "Score": [25, 45, 95, 88, 94]
+                "Date": ["Oct 7", "Oct 12", "Oct 19", "Oct 22", "Today"],
+                "Score": [25, 45, 95, 88, stats['score']] # Dynamically inject today's score!
             })
             
-            # Generate the professional Plotly Line Chart
             fig = px.line(df, x="Date", y="Score", markers=True)
             fig.update_traces(line_color='#00FFFF', marker=dict(size=8, color='#00FFFF'))
             fig.update_layout(
@@ -363,22 +362,15 @@ with right_col:
                 margin=dict(l=0, r=0, t=10, b=0),
                 height=200,
                 xaxis=dict(showgrid=False, color='gray'),
-                yaxis=dict(showgrid=True, gridcolor='#333333', color='gray')
+                yaxis=dict(showgrid=True, gridcolor='#333333', color='gray', range=[0, 100])
             )
             st.plotly_chart(fig, use_container_width=True)
-            
-            # Recent History List
-            st.markdown("**RECENT HISTORY**")
-            st.markdown("<div style='font-size: 14px; color: #00FFFF;'>OCT 26: 94 - Excellent (Barbell)</div>", unsafe_allow_html=True)
-            st.markdown("<div style='font-size: 14px; color: gray;'>OCT 22: 88 - Great (Barbell)</div>", unsafe_allow_html=True)
-            st.markdown("<div style='font-size: 14px; color: gray;'>OCT 19: 95 - Great (Bodyweight)</div>", unsafe_allow_html=True)
 
     else:
-        # Placeholder state before a video is uploaded and processed
+        # Awaiting Upload Placeholder
         st.info("Awaiting video upload and processing...")
         st.markdown("""
             <div style='height: 435px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
-                Upload a video to see your skeletal analysis and RepRight metrics here.
+                Upload a video to see your skeletal analysis and real-time metrics here.
             </div>
         """, unsafe_allow_html=True)
-
