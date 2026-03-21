@@ -15,7 +15,6 @@ st.markdown("""
         color: #FFFFFF;
     }
             
-
     /* Hide the anchor link icon next to headers */
     button.step-down, .element-container:has(h1) a, .element-container:has(h2) a, .element-container:has(h3) a {
         display: none;
@@ -27,24 +26,19 @@ st.markdown("""
     }
             
     /* --- HIDE SCROLLBAR --- */
-    /* Target the main scrollable containers in Streamlit */
     [data-testid="stMainBlockContainer"], 
     .main, 
     .stApp {
         overflow: hidden;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
-    /* Chrome, Safari, and Opera */
     [data-testid="stMainBlockContainer"]::-webkit-scrollbar, 
     .main::-webkit-scrollbar, 
     .stApp::-webkit-scrollbar {
         display: none;
     }
-            
-
-
     
     /* Neon Cyan Brand Colors */
     h1, h2, h3 { color: #00FFFF !important; font-family: 'Courier New', Courier, monospace; }
@@ -57,7 +51,7 @@ st.markdown("""
         border: 1px solid #1E1E1E;
     }
 
-    /* stButton Styling */
+    /* Default stButton Styling */
     .stButton>button {
         width: 100%;
         background-color: #00FFFF;
@@ -95,7 +89,7 @@ st.markdown("""
         display: flex !important;
         flex-direction: row !important;
         gap: 10px !important;
-        width: 406px !important;
+        width: 100% !important;
     }
     
     /* Each radio option - equal width */
@@ -122,8 +116,8 @@ st.markdown("""
     /* Selected radio option */
     [data-testid="stRadio"] > div > label[data-checked="true"] {
         background-color: #0a2a2a !important;
-        border: 1px solid #00FFFF !important;
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3) !important;
+        border: 2px solid #00FFFF !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
     }
     
     /* Radio button text color */
@@ -131,7 +125,6 @@ st.markdown("""
         color: #FFFFFF !important;
         font-size: 14px !important;
         font-weight: 500 !important;
-        margin-left: -5px;
     }
     
     /* Selected radio text */
@@ -144,35 +137,68 @@ st.markdown("""
     [data-testid="stRadio"] > div > label > div:first-child {
         display: none !important;
     }
+    
+    /* File Uploader Styling */
+    [data-testid="stFileUploader"] {
+        width: 100% !important;
+    }
+    
+    [data-testid="stFileUploader"] section {
+        padding: 20px;
+        border: 2px dashed #333;
+        border-radius: 10px;
+        background-color: #1A1A1A;
+    }
+    
+    [data-testid="stFileUploader"] section:hover {
+        border-color: #00FFFF;
+    }
+    
+    /* Process Button Special Styling */
+    .process-btn button {
+        background: linear-gradient(90deg, #00FFFF, #00CCCC) !important;
+        font-size: 16px !important;
+        padding: 18px !important;
+        margin-top: 10px;
+    }
+    
+    .process-btn button:hover {
+        background: linear-gradient(90deg, #00CCCC, #009999) !important;
+        box-shadow: 0 0 25px #00FFFF !important;
+    }
+    
     </style>
 """, unsafe_allow_html=True)
 
 
-
+# --- HEADER ---
 st.markdown("""
 <h1 style='text-align: center; font-size: 65px; padding-bottom: 80px; margin-top: -60px'>REPRIGHT.</h1>
 """, unsafe_allow_html=True)
 
 
+# --- INITIALIZE SESSION STATE ---
+if 'video_processed' not in st.session_state:
+    st.session_state['video_processed'] = False
+
+
 # --- MAIN DASHBOARD SPLIT ---
-# Left Col (Upload) is slightly smaller than Right Col (Results)
-left_col, right_col = st.columns([1, 2])
+left_col, right_col = st.columns([1.5, 2])
 
 
 # ==========================================
 # LEFT COLUMN: UPLOAD & SETTINGS
 # ==========================================
 with left_col:
-    st.markdown("## ANALYZE TRAINING FORM")
+    st.markdown("### ANALYZE TRAINING FORM")
     
     # User Profile Card
-    with st.container():
-        st.markdown("""
-            <div style='background-color: #1A1A1A; padding: 15px; border-radius: 8px; border-left: 4px solid #00FFFF; margin-bottom: 20px; cursor: default; width: 390px;'>
-                <h4 style='margin:0; color:white;'>WELCOME BACK, SANAD!</h4>
-                <p style='margin:0; color:gray; font-size: 14px;'>PLEASE UPLOAD A VIDEO TO GET STARTED</p>
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+        <div style='background-color: #1A1A1A; padding: 15px; border-radius: 8px; border-left: 4px solid #00FFFF; margin-bottom: 20px; cursor: default;'>
+            <h4 style='margin:0; color:white;'>WELCOME BACK, SANAD!</h4>
+            <p style='margin:0; color:gray; font-size: 14px;'>PLEASE UPLOAD A VIDEO TO GET STARTED</p>
+        </div>
+    """, unsafe_allow_html=True)
 
     # Exercise Type Selection
     st.markdown("<p class='section-label'>SELECT EXERCISE TYPE</p>", unsafe_allow_html=True)
@@ -183,18 +209,35 @@ with left_col:
         label_visibility="collapsed"
     )
     
-    st.write("") # Spacing
+    st.write("")
     
-    # File Uploader
-    st.markdown("**UPLOAD VIDEO:**")
-    uploaded_file = st.file_uploader("Drop File Here (Max 50MB, .mp4)", type=['mp4', 'mov'], label_visibility="collapsed")
+    # File Uploader Section
+    st.markdown("<p class='section-label'>UPLOAD VIDEO</p>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(
+        "Drop File Here (Max 50MB, .mp4)", 
+        type=['mp4', 'mov'], 
+        label_visibility="collapsed"
+    )
     
-    st.write("") # Spacing
+    # Show file info if uploaded
+    if uploaded_file is not None:
+        st.markdown(f"""
+            <div style='background-color: #0a2a2a; padding: 10px; border-radius: 8px; border: 1px solid #00FFFF; margin-top: 10px;'>
+                <p style='margin:0; color:#00FFFF; font-size: 13px;'>📁 {uploaded_file.name}</p>
+                <p style='margin:0; color:gray; font-size: 11px;'>Size: {round(uploaded_file.size / (1024 * 1024), 2)} MB</p>
+            </div>
+        """, unsafe_allow_html=True)
     
-    # Process Button & Progress Logic
-    if st.button("PROCESS VIDEO"):
+    st.write("")
+    
+    # Process Button with Special Styling
+    st.markdown('<div class="process-btn">', unsafe_allow_html=True)
+    process_clicked = st.button("⚡ PROCESS VIDEO", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    if process_clicked:
         if uploaded_file is None:
-            st.error("Please upload a video first!")
+            st.error("⚠️ Please upload a video first!")
         else:
             # The "Hollywood" Progress Bar Effect
             progress_bar = st.progress(0)
@@ -202,23 +245,24 @@ with left_col:
             
             # Simulate ML processing time
             for percent_complete in range(100):
-                time.sleep(0.03) # Adjust speed here
+                time.sleep(0.03)
                 progress_bar.progress(percent_complete + 1)
                 
                 # Update text to look like real processing
                 if percent_complete < 30:
-                    status_text.text("Extracting frames via OpenCV...")
+                    status_text.text("📹 Extracting frames via OpenCV...")
                 elif percent_complete < 70:
-                    status_text.text("Running MediaPipe Skeletal Tracking...")
+                    status_text.text("🦴 Running MediaPipe Skeletal Tracking...")
                 else:
-                    status_text.text("Calculating rep depth and angles...")
+                    status_text.text("📐 Calculating rep depth and angles...")
                     
-            status_text.text("Analysis Complete!")
+            status_text.text("✅ Analysis Complete!")
             time.sleep(0.5)
-            status_text.empty() # Clear text after finishing
-            progress_bar.empty() # Clear bar after finishing
+            status_text.empty()
+            progress_bar.empty()
             
             st.session_state['video_processed'] = True
+            st.rerun()
 
 
 # ==========================================
@@ -228,7 +272,7 @@ with right_col:
     st.markdown("### ANALYSIS RESULTS")
     
     # Only show results if processing is done
-    if 'video_processed' in st.session_state and st.session_state['video_processed']:
+    if st.session_state['video_processed']:
         
         # 1. Top Metrics Row
         met_col1, met_col2, met_col3, met_col4, met_col5 = st.columns(5)
@@ -243,14 +287,13 @@ with right_col:
         
         with vid_col:
             st.markdown("**VIDEO PLAYBACK WITH FEEDBACK:**")
-            # For now, replay the uploaded video. Later, Aref's OpenCV output goes here!
             st.video(uploaded_file)
             
             # Timeline Annotations
             st.markdown("**ANNOTATED TIMELINE**")
             st.markdown("""
-                <span style='background-color:#004d4d; color:#00FFFF; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:03 Low Depth</span>
-                <span style='background-color:#4d4d00; color:#ffff00; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:12 Knee Cave</span>
+                <span style='background-color:#004d4d; color:#00FFFF; padding: 4px 8px; border-radius: 4px; font-size:12px; margin-right: 5px;'>0:03 Low Depth</span>
+                <span style='background-color:#4d4d00; color:#ffff00; padding: 4px 8px; border-radius: 4px; font-size:12px; margin-right: 5px;'>0:12 Knee Cave</span>
                 <span style='background-color:#004d4d; color:#00FFFF; padding: 4px 8px; border-radius: 4px; font-size:12px;'>0:18 Great Depth</span>
             """, unsafe_allow_html=True)
             
@@ -284,9 +327,12 @@ with right_col:
 
     else:
         # Placeholder state before a video is uploaded and processed
-        st.info("Awaiting video upload and processing... The AI is resting.")
+        st.info("🤖 Awaiting video upload and processing... The AI is resting.")
         st.markdown("""
             <div style='height: 400px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
-                Upload a video to see your skeletal analysis and RepRight metrics here.
+                <div style='text-align: center;'>
+                    <p style='font-size: 48px; margin: 0;'>🎬</p>
+                    <p style='margin-top: 10px;'>Upload a video to see your skeletal analysis and RepRight metrics here.</p>
+                </div>
             </div>
         """, unsafe_allow_html=True)
