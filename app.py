@@ -2,6 +2,8 @@ import streamlit as st
 import time
 import pandas as pd
 import plotly.express as px
+import tempfile
+from core.video_processor import process_video
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="RepRight", page_icon="🦾", layout="wide")
@@ -15,6 +17,20 @@ st.markdown("""
         color: #FFFFFF;
     }
             
+    /* Scale the entire app down to 90% */
+    html {
+        zoom: 0.9; 
+    }
+            
+    /* --- KILL THE FOOTER COMPLETELY --- */
+    footer, 
+    [data-testid="stFooter"], 
+    [data-testid="stBottom"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+    }
+            
 
     /* Hide the anchor link icon next to headers */
     button.step-down, .element-container:has(h1) a, .element-container:has(h2) a, .element-container:has(h3) a {
@@ -26,12 +42,13 @@ st.markdown("""
         display: none !important;
     }
             
-    /* --- HIDE SCROLLBAR --- */
+    /* --- HIDE SCROLLBAR BUT KEEP SCROLLING --- */
     /* Target the main scrollable containers in Streamlit */
     [data-testid="stMainBlockContainer"], 
     .main, 
     .stApp {
-        overflow: hidden;
+        overflow-y: auto; /* THIS IS THE FIX: Allows vertical scrolling */
+        overflow-x: hidden; /* Prevents accidental left/right scrolling */
         scrollbar-width: none; /* Firefox */
         -ms-overflow-style: none; /* IE/Edge */
     }
@@ -50,7 +67,7 @@ st.markdown("""
     h1, h2, h3 { color: #00FFFF !important; font-family: 'Courier New', Courier, monospace; }
     
     /* Style the containers to look like the wireframe cards */
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="erticalBlock"] {
         background-color: #121212;
         padding: 20px;
         border-radius: 10px;
@@ -79,9 +96,18 @@ st.markdown("""
         background-color: #00FFFF;
     }
 
-    /* Constrain the File Uploader to match the Radio Buttons */
+    /* Constrain File Uploader & PREVENT HEIGHT JUMPING */
     [data-testid="stFileUploader"] {
         width: 390px !important;
+        height: 145px !important; /* Locks the total height of the area */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Shrink the drag-and-drop zone slightly so the uploaded file info has room to appear */
+    [data-testid="stFileUploadDropzone"] {
+        padding: 15px !important; 
+        min-height: 80px !important;
     }
     
     /* Constrain the Button container to match */
@@ -175,6 +201,22 @@ st.markdown("""
     [data-testid="stRadio"] > div > label > div:first-child {
         display: none !important;
     }
+            
+    /* --- CONSTRAIN THE VIDEO PLAYER --- */
+    [data-testid="stVideo"] {
+        width: 100% !important;
+        max-height: 400px !important; /* Prevents the video from getting too tall */
+        border-radius: 10px;
+        border: 1px solid #1E1E1E; /* Matches your right-column card borders */
+        overflow: hidden;
+        background-color: #000000; /* Keeps the background dark if the video is vertical */
+    }
+
+    [data-testid="stVideo"] video {
+        width: 100% !important;
+        max-height: 400px !important;
+        object-fit: contain !important; /* Ensures the whole body is visible without cropping */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -222,34 +264,48 @@ with left_col:
     
     st.write("") # Spacing
     
-    # Process Button & Progress Logic
+# Process Button & Progress Logic
     if st.button("PROCESS VIDEO"):
         if uploaded_file is None:
             st.error("Please upload a video first!")
         else:
-            # The "Hollywood" Progress Bar Effect
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # Simulate ML processing time
-            for percent_complete in range(100):
-                time.sleep(0.03) # Adjust speed here
-                progress_bar.progress(percent_complete + 1)
+            # 1. The Callback: The engine will call this to update the UI
+            def ui_updater(percent, message):
+                progress_bar.progress(percent)
+                status_text.text(message)
                 
-                # Update text to look like real processing
-                if percent_complete < 30:
-                    status_text.text("Extracting frames via OpenCV...")
-                elif percent_complete < 70:
-                    status_text.text("Running MediaPipe Skeletal Tracking...")
-                else:
-                    status_text.text("Calculating rep depth and angles...")
-                    
-            status_text.text("Analysis Complete!")
-            time.sleep(0.5)
-            status_text.empty() # Clear text after finishing
-            progress_bar.empty() # Clear bar after finishing
+            try:
+                # 2. The Handoff: We pass the file, the exercise type, and the UI updater.
+                # OCP applied: If we add new exercises or models later, this UI block NEVER changes.
+                final_video_path, analysis_stats = process_video(
+                    video_file=uploaded_file, 
+                    exercise=squat_type, 
+                    progress_callback=ui_updater
+                )
+                
+                # 3. Success State
+                status_text.text("Analysis Complete!")
+                time.sleep(0.5)
+                st.session_state['video_processed'] = True
+                
+                # We save the results to session state so the Right Column can display them
+                st.session_state['processed_video_path'] = final_video_path
+                st.session_state['form_stats'] = analysis_stats
+                
+            except Exception as e:
+                # Catch any ML/OpenCV errors so the app doesn't crash during the demo
+                st.error(f"Engine Error: {str(e)}")
+                
+            finally:
+                # Always clean up the UI, even if it fails
+                status_text.empty() 
+                progress_bar.empty() 
             
-            st.session_state['video_processed'] = True
+    # Your invisible 80px spacer preventing layout shifts
+    st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -321,7 +377,8 @@ with right_col:
         # Placeholder state before a video is uploaded and processed
         st.info("Awaiting video upload and processing...")
         st.markdown("""
-            <div style='height: 363px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
+            <div style='height: 435px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
                 Upload a video to see your skeletal analysis and RepRight metrics here.
             </div>
         """, unsafe_allow_html=True)
+
