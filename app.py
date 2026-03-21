@@ -332,8 +332,8 @@ with right_col:
         met_col1.metric("AVG SCORE", f"{stats['score']}/100")
         met_col2.metric("REPS", stats["reps"])
         met_col3.metric("GOOD FORM", stats["good_pct"])
-        met_col4.metric("AVG KNEE", stats["avg_knee"])
-        met_col5.metric("AVG BACK", stats["avg_back"])
+        met_col4.metric("DEPTH",        stats["depth"])
+        met_col5.metric("CONSISTENCY",  stats["consistency"])
         
         vid_col, graph_col = st.columns([1.5, 1])
         with vid_col:            
