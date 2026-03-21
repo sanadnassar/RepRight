@@ -81,18 +81,20 @@ st.markdown("""
 
     /* Constrain the File Uploader to match the Radio Buttons */
     [data-testid="stFileUploader"] {
-        width: 406px !important;
+        width: 390px !important;
     }
-
+    
     /* Constrain the Button container to match */
     [data-testid="stButton"] {
-        width: 406px !important;
+        width: 390px !important;
     }
     
     /* Ensure the button itself fills that 406px container */
     div[data-testid="stButton"] > button {
         width: 100% !important;
     }
+            
+
 
     /* ========== RADIO BUTTON STYLING ========== */
     
@@ -216,7 +218,7 @@ with left_col:
     
     # File Uploader
     st.markdown("**UPLOAD VIDEO:**")
-    uploaded_file = st.file_uploader("Drop File Here (Max 50MB, .mp4)", type=['mp4', 'mov'], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Drop File Here", type=['mp4'], label_visibility="collapsed")
     
     st.write("") # Spacing
     
@@ -254,7 +256,11 @@ with left_col:
 # RIGHT COLUMN: ANALYSIS RESULTS
 # ==========================================
 with right_col:
-    st.markdown("### ANALYSIS RESULTS")
+    st.markdown("""
+    <h2 style='padding-top: 15px; padding-bottom: 20px; padding-left: 10px;'>
+        ANALYSIS RESULTS
+    </h2>
+    """, unsafe_allow_html=True)
     
     # Only show results if processing is done
     if 'video_processed' in st.session_state and st.session_state['video_processed']:
@@ -313,9 +319,9 @@ with right_col:
 
     else:
         # Placeholder state before a video is uploaded and processed
-        st.info("Awaiting video upload and processing... The AI is resting.")
+        st.info("Awaiting video upload and processing...")
         st.markdown("""
-            <div style='height: 400px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
+            <div style='height: 363px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
                 Upload a video to see your skeletal analysis and RepRight metrics here.
             </div>
         """, unsafe_allow_html=True)
