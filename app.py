@@ -346,7 +346,19 @@ with right_col:
                 st.error("Error loading video. Ensure the 'avc1' codec is used in the backend.")
             
             st.markdown("**SESSION NOTES**")
-            st.markdown(f"<span style='color:gray; font-size:14px;'>Target Exercise: {squat_type}</span>", unsafe_allow_html=True)
+            st.markdown(f"<span style='color:gray; font-size:14px;'>Exercise: {squat_type}</span>", unsafe_allow_html=True)
+            feedback = stats.get("feedback", "")
+            if feedback:
+                st.markdown(f"""
+                    <div style='background:#1A1A1A; border-left: 4px solid #00FFFF; 
+                                padding:12px; border-radius:6px; margin-top:10px;'>
+                        <p style='color:#00FFFF; margin:0; font-size:13px; 
+                                font-weight:bold;'>OVERALL VERDICT</p>
+                        <p style='color:white; margin:4px 0 0; font-size:14px;'>
+                            {feedback}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
 
         with graph_col:
             st.markdown("**MY PROGRESS**")

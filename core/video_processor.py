@@ -32,22 +32,30 @@ def draw_skeleton(frame, landmarks, score):
         cv2.circle(frame, pt, 6, colour, -1)
         cv2.circle(frame, pt, 8, (255, 255, 255), 1)
 
-def draw_hud(frame, knee_angle, hip_angle, back_angle, label, score, confidence, feedback, rep_count):
+def draw_hud(frame, knee_angle, hip_angle, back_angle, 
+             label, score, rep_count):
     h, w = frame.shape[:2]
     colour = get_score_colour(score)
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (10, 10), (340, 220), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, frame)
     
-    lines = ["RepRight", f"Reps: {rep_count}", f"Score: {score}/100", 
-             f"Conf: {int(confidence*100)}%", f"K:{int(knee_angle)} H:{int(hip_angle)} B:{int(back_angle)}", label.upper()]
-    y = 38
-    for i, line in enumerate(lines):
-        font_scale, thickness = (1.1, 3) if i == 0 else (0.8, 2)
-        col = colour if i == 5 else (255, 255, 255)
-        cv2.putText(frame, line, (20, y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, col, thickness, cv2.LINE_AA)
-        y += 34
-    cv2.putText(frame, feedback, (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.65, colour, 2, cv2.LINE_AA)
+    # Semi-transparent panel
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (10, 10), (280, 140), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, frame)
+
+    lines = [
+        ("RepRight",              (255, 255, 255), 1.1, 3),
+        (f"Reps: {rep_count}",    (255, 255, 255), 0.8, 2),
+        (f"K:{int(knee_angle)}  H:{int(hip_angle)}  B:{int(back_angle)}",
+                                  (255, 255, 255), 0.7, 1),
+        (label.upper(),           colour,          0.9, 2),
+    ]
+
+    y = 40
+    for text, col, scale, thick in lines:
+        cv2.putText(frame, text, (20, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                scale, col, thick, cv2.LINE_AA)
+        y += 30
 
 def process_video(video_file, exercise, progress_callback):
     # GUARD: Only SQUATS supported for now
@@ -73,6 +81,12 @@ def process_video(video_file, exercise, progress_callback):
     rep_count, rep_state, DEPTH_THRESHOLD = 0, "up", 95
     current_frame, good_frames, total_person_frames = 0, 0, 0
     all_scores, knee_angles, back_angles = [], [], []
+
+    # Default values — used when person is standing or not in squat range
+    label = "ready"
+    score = 50
+    confidence = 1.0
+    latest_feedback = ""
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -113,27 +127,27 @@ def process_video(video_file, exercise, progress_callback):
             # 2. State Machine for Rep Counting (Always runs)
             if k_ang < DEPTH_THRESHOLD and rep_state == "up": 
                 rep_state = "down"
+                latest_feedback = get_feedback(k_ang, h_ang, b_ang, label)
             elif k_ang > DEPTH_THRESHOLD and rep_state == "down":
                 rep_state = "up"
                 rep_count += 1
 
-            # 3. Get prediction for the HUD (Always runs so UI is live)
-            label, score, confidence = predict_form(k_ang, h_ang, b_ang)
 
             # 4. THE GUARD: Only track stats if the user is actually in a rep
             # This ignores frames where the user is just standing straight (k_ang > 165)
             if k_ang < 165: 
+                label, score, confidence = predict_form(k_ang, h_ang, b_ang)
                 total_person_frames += 1
                 all_scores.append(score)
                 knee_angles.append(k_ang)
                 back_angles.append(b_ang)
+                latest_feedback = get_feedback(k_ang, h_ang, b_ang, label)
                 if label == "good": 
                     good_frames += 1
             
             # 5. Drawing (Always runs so the skeleton doesn't disappear)
             draw_skeleton(frame, lm, score)
-            draw_hud(frame, k_ang, h_ang, b_ang, label, score, confidence, 
-                     get_feedback(k_ang, h_ang, b_ang, label), rep_count)
+            draw_hud(frame, k_ang, h_ang, b_ang, label, score, rep_count)
 
         out.write(frame)
 
@@ -146,5 +160,11 @@ def process_video(video_file, exercise, progress_callback):
     avg_knee = int(sum(knee_angles) / len(knee_angles)) if knee_angles else 0
     avg_back = int(sum(back_angles) / len(back_angles)) if back_angles else 0
 
-    return output_path, {"score": avg_score, "reps": rep_count, "good_pct": f"{good_pct}%", "avg_knee": f"{avg_knee}°", "avg_back": f"{avg_back}°"}
-
+    return output_path, {
+        "score":    avg_score,
+        "reps":     rep_count,
+        "good_pct": f"{good_pct}%",
+        "avg_knee": f"{avg_knee}°",
+        "avg_back": f"{avg_back}°",
+        "feedback": latest_feedback,
+    }
