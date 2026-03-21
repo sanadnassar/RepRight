@@ -12,29 +12,40 @@ model = joblib.load(MODEL_PATH)
 le    = joblib.load(ENCODER_PATH)
 
 #takes 3 angles(knee, hip, back)
-def predict_form(knee_angle, hip_angle, back_angle):
-    
-    # mirror the exact feature order from train_model.py
-    features = np.array([[
-        back_angle,   # right_elbow_right_shoulder_right_hip
-        back_angle,   # left_elbow_left_shoulder_left_hip
-        hip_angle,    # right_knee_mid_hip_left_knee
-        knee_angle,   # right_hip_right_knee_right_ankle
-        knee_angle    # left_hip_left_knee_left_ankle
-    ]])
-
+def predict_form(knee_angle, hip_angle, back_angle, heel_lift_detected=False, back_rounded=False):
+    # 1. Run the existing ML model (The "Base Score")
+    features = np.array([[back_angle, back_angle, hip_angle, knee_angle, knee_angle]])
     prediction_encoded = model.predict(features)[0]
-    probability        = model.predict_proba(features)[0]
-    confidence         = float(np.max(probability))
-    label              = le.inverse_transform([prediction_encoded])[0]
+    probability = model.predict_proba(features)[0]
+    confidence = float(np.max(probability))
+    label = le.inverse_transform([prediction_encoded])[0]
 
-    #convert to 0-100 score
+    # 2. Base Scoring
     if label == "good":
-        score = int(50 + confidence * 50)   # 50-100
+        score = int(50 + confidence * 50)
     else:
-        score = int((1 - confidence) * 50)  # 0-50
+        score = int((1 - confidence) * 50)
 
-    return label, score, confidence
+    # 3. THE WOW FACTOR: Safety Overrides
+    # Even if the ML says "Good," these rules can override it
+    reasons = []
+    
+    if heel_lift_detected:
+        score -= 25
+        reasons.append("HEELS LIFTED")
+        
+    if back_rounded:
+        score -= 20
+        reasons.append("BACK ROUNDED")
+
+    # Final logic: If safety is compromised, it can't be "Good"
+    if score < 60:
+        label = "bad"
+        
+    # Ensure score stays between 0-100
+    score = max(0, min(100, score))
+
+    return label, score, confidence, reasons
 
 #test
 if __name__ == "__main__":
