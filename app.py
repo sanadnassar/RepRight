@@ -79,6 +79,21 @@ st.markdown("""
         background-color: #00FFFF;
     }
 
+    /* Constrain the File Uploader to match the Radio Buttons */
+    [data-testid="stFileUploader"] {
+        width: 406px !important;
+    }
+
+    /* Constrain the Button container to match */
+    [data-testid="stButton"] {
+        width: 406px !important;
+    }
+    
+    /* Ensure the button itself fills that 406px container */
+    div[data-testid="stButton"] > button {
+        width: 100% !important;
+    }
+
     /* ========== RADIO BUTTON STYLING ========== */
     
     /* Section Labels */
@@ -111,6 +126,20 @@ st.markdown("""
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
+    }
+            
+    /* Selected radio option */
+    [data-testid="stRadio"] > div > label:has(input:checked) {
+        background-color: #002222 !important; /* A nice deep cyan-tinted black */
+        border: 1px solid #00FFFF !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.3) !important;
+    }
+    
+    /* Selected radio text */
+    [data-testid="stRadio"] > div > label:has(input:checked) p {
+        color: #00FFFF !important;
+        font-weight: 800 !important;
+        text-shadow: 0 0 8px rgba(0, 255, 255, 0.5) !important;
     }
     
     /* Radio option hover effect */
