@@ -310,6 +310,12 @@ with left_col:
 # ==========================================
 # RIGHT COLUMN: ANALYSIS RESULTS
 # ==========================================
+# ==========================================
+# RIGHT COLUMN: ANALYSIS RESULTS
+# ==========================================
+# ==========================================
+# RIGHT COLUMN: ANALYSIS RESULTS
+# ==========================================
 with right_col:
     st.markdown("""
     <h2 style='padding-top: 15px; padding-bottom: 20px; padding-left: 10px;'>
@@ -317,60 +323,46 @@ with right_col:
     </h2>
     """, unsafe_allow_html=True)
     
+    # --- ONLY SHOW EVERYTHING BELOW IF PROCESSING IS DONE ---
     if 'video_processed' in st.session_state and st.session_state['video_processed']:
-        
-        # Pull the real data out of memory
         stats = st.session_state['form_stats']
         
-        # 1. Top Metrics Row (Updated to use dynamic keys)
+        # 1. Top Metrics Row
         met_col1, met_col2, met_col3, met_col4, met_col5 = st.columns(5)
         met_col1.metric("AVG SCORE", f"{stats['score']}/100")
-        met_col2.metric("REPS DETECTED", stats["reps"])
+        met_col2.metric("REPS", stats["reps"])
         met_col3.metric("GOOD FORM", stats["good_pct"])
         met_col4.metric("AVG KNEE", stats["avg_knee"])
         met_col5.metric("AVG BACK", stats["avg_back"])
         
-        # 2. Video Playback & Graph Row
         vid_col, graph_col = st.columns([1.5, 1])
-        
-        with vid_col:
-            st.markdown("**PROCESSED FOOTAGE:**")
-            
-            # ---> DISPLAYING THE OUTPUT VIDEO <---
-            # Streamlit reads the temporary file OpenCV just created
-            annotated_video = st.session_state['processed_video_path']
-            st.video(annotated_video)
+        with vid_col:            
+            # READ AS BYTES: This is the most stable way to feed processed video to the browser
+            try:
+                with open(st.session_state['processed_video_path'], 'rb') as f:
+                    video_bytes = f.read()
+                st.video(video_bytes)
+            except Exception as e:
+                st.error("Error loading video. Ensure the 'avc1' codec is used in the backend.")
             
             st.markdown("**SESSION NOTES**")
             st.markdown(f"<span style='color:gray; font-size:14px;'>Target Exercise: {squat_type}</span>", unsafe_allow_html=True)
-            
+
         with graph_col:
             st.markdown("**MY PROGRESS**")
-            
-            # (You can leave your Plotly dummy chart here for now, 
-            # or wire it up to a real CSV history later)
             df = pd.DataFrame({
                 "Date": ["Oct 7", "Oct 12", "Oct 19", "Oct 22", "Today"],
-                "Score": [25, 45, 95, 88, stats['score']] # Dynamically inject today's score!
+                "Score": [25, 45, 95, 88, stats['score']]
             })
-            
             fig = px.line(df, x="Date", y="Score", markers=True)
-            fig.update_traces(line_color='#00FFFF', marker=dict(size=8, color='#00FFFF'))
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=0, r=0, t=10, b=0),
-                height=200,
-                xaxis=dict(showgrid=False, color='gray'),
-                yaxis=dict(showgrid=True, gridcolor='#333333', color='gray', range=[0, 100])
-            )
+            # ... (Your fig layout code)
             st.plotly_chart(fig, use_container_width=True)
 
+    # --- SHOW PLACEHOLDER IF NOT DONE YET ---
     else:
-        # Awaiting Upload Placeholder
-        st.info("Awaiting video upload and processing...")
+        st.info("Awaiting video processing...")
         st.markdown("""
             <div style='height: 435px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
-                Upload a video to see your skeletal analysis and real-time metrics here.
+                Processed video and metrics will appear here once analysis is complete.
             </div>
         """, unsafe_allow_html=True)

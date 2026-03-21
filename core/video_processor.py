@@ -66,7 +66,7 @@ def process_video(video_file, exercise, progress_callback):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # ISSUE 1 FIX: mp4v codec for cross-platform compatibility
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
     # Real-time trackers
@@ -86,32 +86,54 @@ def process_video(video_file, exercise, progress_callback):
         results = pose.process(rgb)
 
         if results.pose_landmarks:
-            total_person_frames += 1
             lm = results.pose_landmarks.landmark
 
-            l_hip, l_knee, l_ankle = [lm[23].x, lm[23].y], [lm[25].x, lm[25].y], [lm[27].x, lm[27].y]
-            r_hip, r_knee, r_ankle = [lm[24].x, lm[24].y], [lm[26].x, lm[26].y], [lm[28].x, lm[28].y]
-            l_sh, r_sh = [lm[11].x, lm[11].y], [lm[12].x, lm[12].y]
+            # LANDMARK EXTRACTION
+            # These must be defined before they are used in the calculations below
+            l_sh = [lm[11].x, lm[11].y]
+            r_sh = [lm[12].x, lm[12].y]
+            l_hip = [lm[23].x, lm[23].y]
+            r_hip = [lm[24].x, lm[24].y]
+            l_knee = [lm[25].x, lm[25].y]
+            r_knee = [lm[26].x, lm[26].y]
+            l_ankle = [lm[27].x, lm[27].y]
+            r_ankle = [lm[28].x, lm[28].y]
 
+            # 1. Calculate the current angles
             k_ang = (calculate_angle(l_hip, l_knee, l_ankle) + calculate_angle(r_hip, r_knee, r_ankle)) / 2
             h_ang = (calculate_angle(l_sh, l_hip, l_knee) + calculate_angle(r_sh, r_hip, r_knee)) / 2
-            b_ang = calculate_angle([(l_sh[0]+r_sh[0])/2, (l_sh[1]+r_sh[1])/2], [(l_hip[0]+r_hip[0])/2, (l_hip[1]+r_hip[1])/2], l_knee)
+            
+            # Back angle uses the midpoint of shoulders and hips
+            b_ang = calculate_angle(
+                [(l_sh[0] + r_sh[0]) / 2, (l_sh[1] + r_sh[1]) / 2], 
+                [(l_hip[0] + r_hip[0]) / 2, (l_hip[1] + r_hip[1]) / 2], 
+                l_knee
+            )
 
-            knee_angles.append(k_ang)
-            back_angles.append(b_ang)
-
-            if k_ang < DEPTH_THRESHOLD and rep_state == "up": rep_state = "down"
+            # 2. State Machine for Rep Counting (Always runs)
+            if k_ang < DEPTH_THRESHOLD and rep_state == "up": 
+                rep_state = "down"
             elif k_ang > DEPTH_THRESHOLD and rep_state == "down":
                 rep_state = "up"
                 rep_count += 1
 
-            # ISSUE 3 CHECK: Returns 3 values
+            # 3. Get prediction for the HUD (Always runs so UI is live)
             label, score, confidence = predict_form(k_ang, h_ang, b_ang)
-            all_scores.append(score)
-            if label == "good": good_frames += 1
+
+            # 4. THE GUARD: Only track stats if the user is actually in a rep
+            # This ignores frames where the user is just standing straight (k_ang > 165)
+            if k_ang < 165: 
+                total_person_frames += 1
+                all_scores.append(score)
+                knee_angles.append(k_ang)
+                back_angles.append(b_ang)
+                if label == "good": 
+                    good_frames += 1
             
+            # 5. Drawing (Always runs so the skeleton doesn't disappear)
             draw_skeleton(frame, lm, score)
-            draw_hud(frame, k_ang, h_ang, b_ang, label, score, confidence, get_feedback(k_ang, h_ang, b_ang, label), rep_count)
+            draw_hud(frame, k_ang, h_ang, b_ang, label, score, confidence, 
+                     get_feedback(k_ang, h_ang, b_ang, label), rep_count)
 
         out.write(frame)
 
