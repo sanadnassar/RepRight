@@ -1,3 +1,16 @@
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-0097A7?style=for-the-badge&logo=google&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
+
+![Accuracy](https://img.shields.io/badge/Model%20Accuracy-90.74%25-00FFAA?style=for-the-badge)
+![Trees](https://img.shields.io/badge/Random%20Forest-200%20Trees-00FFFF?style=for-the-badge)
+![Hackathon](https://img.shields.io/badge/DataQuest'26-Healthcare%20%26%20Wellbeing-FF4B4B?style=for-the-badge)
+
 # RepRight — AI Squat Form Analyser
 
 **DataQuest'26 Hackathon | Healthcare & Wellbeing Track**
