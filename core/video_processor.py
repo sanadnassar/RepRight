@@ -11,9 +11,10 @@ from core.model_inference import predict_form
 # ─────────────────────────────────────────────
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5,
-    model_complexity=2  # Higher precision landmark tracking
+    min_detection_confidence=0.3,
+    min_tracking_confidence=0.2,
+    model_complexity=2,
+    smooth_landmarks=True
 )
 
 # Added feet connections (27-32) for full lower body skeleton
@@ -92,10 +93,12 @@ def detect_knee_cave(lm, k_ang):
     return knee_width < ankle_width * 0.85 and k_ang < 130
 
 
+
 # ─────────────────────────────────────────────
 #  MAIN VIDEO PROCESSOR
 # ─────────────────────────────────────────────
 def process_video(video_file, exercise, progress_callback):
+
 
     if exercise != "SQUATS":
         raise ValueError(f"{exercise} analysis coming soon! Currently only SQUATS are supported.")
@@ -106,6 +109,13 @@ def process_video(video_file, exercise, progress_callback):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tfile:
         tfile.write(video_file.read())
         input_path = tfile.name
+
+    cap = cv2.VideoCapture(input_path)
+    fps          = int(cap.get(cv2.CAP_PROP_FPS))
+    w            = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h            = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
 
     output_path  = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
     cap          = cv2.VideoCapture(input_path)
@@ -154,6 +164,13 @@ def process_video(video_file, exercise, progress_callback):
 
     good_reps = 0
     confidence_scores = []
+
+
+    last_known_score = 50
+    last_known_label = "ready"
+
+    consecutive_no_detection = 0
+    MAX_NO_DETECTION_FRAMES = int(fps * 2)
     # ── Frame Loop ──
     while cap.isOpened():
         ret, frame = cap.read()
@@ -170,7 +187,7 @@ def process_video(video_file, exercise, progress_callback):
 
         if results.pose_landmarks:
             lm = results.pose_landmarks.landmark
-
+            consecutive_no_detection = 0
             # ── 1. LANDMARK EXTRACTION ──
             l_sh    = [lm[11].x, lm[11].y]
             r_sh    = [lm[12].x, lm[12].y]
@@ -219,7 +236,7 @@ def process_video(video_file, exercise, progress_callback):
                     rep_scores.append(rep_avg)
                     current_rep_scores = []
                 # Count as good rep if minimum depth was reached this rep
-                if min(knee_angles[-20:]) < 95:  # check last 20 frames for depth
+                if knee_angles and min(knee_angles[-20:]) < 95: # check last 20 frames for depth
                     good_reps += 1
 
             # ── 5. ACTIVE REP GUARD ──
@@ -253,9 +270,10 @@ def process_video(video_file, exercise, progress_callback):
                 # Update trackers
                 if label != "ready":
                     total_person_frames += 1
-                if label != "ready":
                     all_scores.append(score)
                     confidence_scores.append(confidence)
+                    last_known_score = score
+                    last_known_label = label
                 knee_angles.append(k_ang)
                 back_angles.append(b_ang)
                 current_rep_scores.append(score)
@@ -277,9 +295,21 @@ def process_video(video_file, exercise, progress_callback):
                 locked_score = 50
                 smoother.window.clear()
 
-            # ── 6. DRAW ──
             draw_skeleton(frame, lm, score, label)
             draw_hud(frame, k_ang, h_ang, b_ang, label, score, rep_count, reasons)
+        else:
+            consecutive_no_detection += 1
+            if consecutive_no_detection > MAX_NO_DETECTION_FRAMES:
+                cap.release()
+                out.release()
+                raise ValueError(
+                    "Tracking was lost for more than 2 seconds. "
+                    "Ensure your full body stays in frame throughout the video."
+                )
+            out.write(frame)
+            continue
+
+        
 
         out.write(frame)
 
