@@ -26,12 +26,12 @@
   </tr>
   <tr>
     <td valign="top">
-      <img src="landingpageRepRight.png" width="100%" alt="RepRight Landing Page">
+      <img src="assets/landingpageRepRight.png" width="100%" alt="RepRight Landing Page">
       <br>
       <h3>RepRight's main page dashboard. Includes selecting an exercise (works only for squats, others coming soon...) and uploading a video.</sub>
     </td>
     <td valign="top" align="center">
-      <img src="goodsquatdemo.gif" width="100%" alt="AI Skeleton Demo">
+      <img src="assets/goodsquatdemo.gif" width="100%" alt="AI Skeleton Demo">
       <br><br>
       <a href="https://www.youtube.com/watch?v=1A_R7b95vpU">
         <img src="https://img.shields.io/badge/Full_Video_Demo-FF4B4B?style=flat-square&logo=youtube&logoColor=white" alt="Watch Demo">

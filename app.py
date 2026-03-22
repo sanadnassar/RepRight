@@ -6,7 +6,7 @@ import tempfile
 from core.video_processor import process_video
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="RepRight", page_icon="./bicep-svgrepo-com.svg", layout="wide")
+st.set_page_config(page_title="RepRight", page_icon="assets\bicep-svgrepo-com.svg", layout="wide")
 
 # --- CUSTOM CSS (Black & Cyan Theme) ---
 st.markdown("""
