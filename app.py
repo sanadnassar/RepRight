@@ -416,13 +416,14 @@ with right_col:
                             warnings_html = ""
 
                         # Push to the UI with zero leading spaces inside the string
+                        # Push to the UI - REMOVED LEADING SPACES to prevent code block rendering
                         st.markdown(f"""
-            <div style='background:#1A1A1A; height: 300px; border-left: 4px solid {verdict_color}; padding:14px; border-radius:6px; margin-top:10px;'>
-                <p style='color:{verdict_color}; margin:0 0 8px; font-size:13px; font-weight:bold; letter-spacing:1px;'>{verdict_header}</p>
-                {feedback_html}
-                {warnings_html}
-            </div>
-            """, unsafe_allow_html=True)
+<div style='background:#1A1A1A; height: 300px; border-left: 4px solid {verdict_color}; padding:14px; border-radius:6px; margin-top:10px;'>
+<p style='color:{verdict_color}; margin:0 0 8px; font-size:13px; font-weight:bold; letter-spacing:1px;'>{verdict_header}</p>
+{feedback_html}
+{warnings_html}
+</div>
+""", unsafe_allow_html=True)
 
     # --- SHOW PLACEHOLDER IF NOT DONE YET ---
     else:
