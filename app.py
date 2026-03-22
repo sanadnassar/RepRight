@@ -99,7 +99,7 @@ st.markdown("""
     /* Constrain File Uploader & PREVENT HEIGHT JUMPING */
     [data-testid="stFileUploader"] {
         width: 390px !important;
-        height: 145px !important; /* Locks the total height of the area */
+        height: 170px !important; /* Locks the total height of the area */
         display: flex;
         flex-direction: column;
     }
@@ -216,6 +216,13 @@ st.markdown("""
         width: 100% !important;
         max-height: 400px !important;
         object-fit: contain !important; /* Ensures the whole body is visible without cropping */
+    }
+    [data-testid="stProgress"] {
+    width: 390px !important;
+    }
+
+    [data-testid="stProgress"] > div {
+        width: 390px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -394,7 +401,7 @@ with right_col:
     else:
         st.info("Awaiting video processing...")
         st.markdown("""
-            <div style='height: 435px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
+            <div style='height: 463px; display: flex; align-items: center; justify-content: center; border: 2px dashed #333; border-radius: 10px; color: #555;'>
                 Processed video and metrics will appear here once analysis is complete.
             </div>
         """, unsafe_allow_html=True)
