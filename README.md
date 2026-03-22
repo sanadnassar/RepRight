@@ -2,7 +2,9 @@
 
 **DataQuest'26 Hackathon | Healthcare & Wellbeing Track**
 
-Built by **Aref Turkieh** (ML & Data) and **Sanad Nassar** (Software & Frontend)
+Built by **Aref Turkieh** (ML & Data) and **Sanad Nassar** (Data & Frontend)
+
+Website: https://repright.streamlit.app/
 
 ---
 
