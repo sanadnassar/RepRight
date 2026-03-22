@@ -11,19 +11,37 @@
 ![Trees](https://img.shields.io/badge/Random%20Forest-200%20Trees-00FFFF?style=for-the-badge)
 ![Hackathon](https://img.shields.io/badge/DataQuest'26-Healthcare%20%26%20Wellbeing-FF4B4B?style=for-the-badge)
 
-# RepRight — AI Squat Form Analyser
+<h1 align="center">DataQuest'26 Hackathon | RepRight's AI Squat Form Analyser</h1>
 
-## Preview
+<p align="center">
+  <img src="https://img.shields.io/badge/Built%20By-Aref%20Turkieh%20%26%20Sanad%20Nassar-00FFFF?style=for-the-badge&logoColor=black" alt="Authors">
+</p>
 
-| Landing Page | AI Form Analysis in Action |
-|--------------|---------------------------|
-| ![Landing Page](path/to/screenshot.png) | ![Analysis Demo](path/to/demo.gif) |
+# Preview
 
-**DataQuest'26 Hackathon | Healthcare & Wellbeing Track**
+<table>
+  <tr>
+    <th width="70%">🖥️ App Interface & Dashboard</th>
+    <th width="30%">🦴 AI Analysis</th>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="landingpageRepRight.png" width="100%" alt="RepRight Landing Page">
+      <br>
+      <h3>RepRight's main page dashboard. Includes selecting an exercise (works only for squats, others coming soon...) and uploading a video.</sub>
+    </td>
+    <td valign="top" align="center">
+      <img src="goodsquatdemo.gif" width="100%" alt="AI Skeleton Demo">
+      <br><br>
+      <a href="https://www.youtube.com/watch?v=1A_R7b95vpU">
+        <img src="https://img.shields.io/badge/Full_Video_Demo-FF4B4B?style=flat-square&logo=youtube&logoColor=white" alt="Watch Demo">
+      </a>
+      <br>
+    </td>
+  </tr>
+</table>
 
-Built by **Aref Turkieh** (ML & Data) and **Sanad Nassar** (Data & Frontend)
 
-Website: https://repright.streamlit.app/
 
 ---
 
