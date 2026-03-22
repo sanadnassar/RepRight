@@ -13,6 +13,12 @@
 
 # RepRight — AI Squat Form Analyser
 
+## Preview
+
+| Landing Page | AI Form Analysis in Action |
+|--------------|---------------------------|
+| ![Landing Page](path/to/screenshot.png) | ![Analysis Demo](path/to/demo.gif) |
+
 **DataQuest'26 Hackathon | Healthcare & Wellbeing Track**
 
 Built by **Aref Turkieh** (ML & Data) and **Sanad Nassar** (Data & Frontend)
