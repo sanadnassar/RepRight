@@ -333,12 +333,11 @@ def process_video(video_file, exercise, progress_callback):
     avg_confidence = int((sum(confidence_scores) / len(confidence_scores)) * 100) if confidence_scores else 0
     avg_knee_at_depth = int(min(knee_angles)) if knee_angles else 0
 
-    if avg_knee_at_depth < 90:
+    if depth_pct < 75:
+        depth_label = ""
+    elif 75 <= depth_pct <= 100:
         depth_label = "Ideal"
-    elif avg_knee_at_depth < 105:
-        depth_label = "Too shallow"
-    else:
-        depth_label = "No depth"
+   
 
     if avg_score >= 75:
         verdict = "Good"
