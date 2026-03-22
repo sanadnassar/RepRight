@@ -224,6 +224,42 @@ st.markdown("""
     [data-testid="stProgress"] > div {
         width: 390px !important;
     }
+            
+
+    
+    /* --- CUSTOM METRIC CARDS --- */
+    [data-testid="stMetric"] {
+        background-color: #1A1A1A !important;
+        border: 1px solid #333 !important;
+        border-radius: 8px !important;
+        padding: 15px 10px !important;
+        text-align: center !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.4) !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Center the top label and make it gray */
+    [data-testid="stMetricLabel"] {
+        justify-content: center !important;
+        color: #888888 !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        letter-spacing: 1px !important;
+    }
+    
+    /* Make the big number neon cyan */
+    [data-testid="stMetricValue"] {
+        color: #00FFFF !important;
+        font-size: 26px !important;
+        font-weight: 900 !important;
+    }
+            
+
+
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -249,7 +285,7 @@ with left_col:
     with st.container():
         st.markdown("""
             <div style='background-color: #1A1A1A; padding: 15px; border-radius: 8px; border-left: 4px solid #00FFFF; margin-bottom: 20px; cursor: default; width: 390px;'>
-                <h4 style='margin:0; color:white;'>WELCOME BACK, SANAD!</h4>
+                <h4 style='margin:0; color:white;'>WELCOME TO REPRIGHT!</h4>
                 <p style='margin:0; color:gray; font-size: 14px;'>PLEASE UPLOAD A VIDEO TO GET STARTED</p>
             </div>
         """, unsafe_allow_html=True)
@@ -284,7 +320,6 @@ with left_col:
                 status_text.text(message)
                 
             try:
-                # ---> THE CONNECTION HAPPENS HERE <---
                 # We call Aref's function and it returns the path to the annotated video + real stats
                 final_video_path, real_stats = process_video(
                     video_file=uploaded_file, 
@@ -314,15 +349,6 @@ with left_col:
 # ==========================================
 # RIGHT COLUMN: ANALYSIS RESULTS
 # ==========================================
-# ==========================================
-# RIGHT COLUMN: ANALYSIS RESULTS
-# ==========================================
-# ==========================================
-# RIGHT COLUMN: ANALYSIS RESULTS
-# ==========================================
-# ==========================================
-# RIGHT COLUMN: ANALYSIS RESULTS
-# ==========================================
 with right_col:
     st.markdown("""
     <h2 style='padding-top: 15px; padding-bottom: 20px; padding-left: 10px;'>
@@ -335,14 +361,19 @@ with right_col:
         stats = st.session_state['form_stats']
         
         # 1. Top Metrics Row
-        met_col1, met_col2, met_col3, met_col4, met_col5 = st.columns(5)
-        met_col1.metric("AVG SCORE",   f"{stats['score']}/100")
+        met_col1, met_col2, met_col3, met_col4, met_col5, met_col6 = st.columns(6)
+        met_col1.metric("AVG SCORE",   f"{stats['score']}%")
         met_col2.metric("VERDICT",     stats['verdict'])
-        met_col3.metric("REPS",        f"{stats['good_reps']}/{stats['total_reps']}")
-        met_col4.metric("DEPTH",       f"{stats['depth_pct']} · {stats['depth_label']}")
+        met_col3.metric("REPS",        f"{stats['total_reps']}")
+        met_col4.metric("GOOD REPS",       stats['good_reps'])
         met_col5.metric("CONFIDENCE",  stats["avg_confidence"])
+        met_col6.metric("DEPTH", f"{stats['depth_pct']} · {stats['depth_label']}")
         
-        vid_col, graph_col = st.columns([1.5, 1])
+        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+
+        # 2. Split into Video Column (Left) and Notes Column (Right)
+        vid_col, notes_col = st.columns([1.8, 1])
+        
         with vid_col:            
             # READ AS BYTES: This is the most stable way to feed processed video to the browser
             try:
@@ -351,51 +382,47 @@ with right_col:
                 st.video(video_bytes)
             except Exception as e:
                 st.error("Error loading video. Ensure the 'avc1' codec is used in the backend.")
-            
-            st.markdown("**SESSION NOTES**")
-            st.markdown(f"<span style='color:gray; font-size:14px;'>Exercise: {squat_type}</span>", unsafe_allow_html=True)
-            verdict   = stats.get("verdict", "")
-            feedback  = stats.get("feedback", "")
-            warnings  = stats.get("all_warnings", {})
-            active_warnings = [k for k, v in warnings.items() if v > 0]
+                
+            with notes_col:
+                        st.markdown("**SESSION NOTES**")
+                        st.markdown(f"<span style='color:gray; font-size:14px;'>Exercise: SQUATS</span>", unsafe_allow_html=True)
+                        
+                        verdict   = stats.get("verdict", "")
+                        feedback  = stats.get("feedback", "")
+                        warnings  = stats.get("all_warnings", {})
+                        active_warnings = [k for k, v in warnings.items() if v > 0]
 
-            if verdict == "Good":
-                verdict_color = "#00FFAA"
-                verdict_header = "GOOD FORM"
-                show_feedback = False
-            elif verdict == "Decent":
-                verdict_color = "#FFD700"
-                verdict_header = "DECENT — NEEDS WORK"
-                show_feedback = True
-            else:
-                verdict_color = "#FF6B6B"
-                verdict_header = "BAD — NEEDS WORK"
-                show_feedback = True
+                        if verdict == "Good":
+                            verdict_color = "#00FFAA"
+                            verdict_header = "GOOD FORM"
+                            show_feedback = False
+                        elif verdict == "Decent":
+                            verdict_color = "#FFD700"
+                            verdict_header = "DECENT — NEEDS WORK"
+                            show_feedback = True
+                        else:
+                            verdict_color = "#FF6B6B"
+                            verdict_header = "BAD — NEEDS WORK"
+                            show_feedback = True
 
-            st.markdown(f"""
-                <div style='background:#1A1A1A; border-left: 4px solid {verdict_color};
-                            padding:14px; border-radius:6px; margin-top:10px;'>
-                    <p style='color:{verdict_color}; margin:0 0 8px; font-size:13px;
-                            font-weight:bold; letter-spacing:1px;'>{verdict_header}</p>
-                    {f"<p style='color:white; margin:0 0 10px; font-size:14px;'>{feedback}</p>" 
-                    if show_feedback and feedback else ""}
-                    {"".join([
-                        f"<p style='color:#FF6B6B; margin:3px 0; font-size:13px;'>• {w}</p>"
-                        for w in active_warnings
-                    ]) if show_feedback and active_warnings else
-                    "<p style='color:#00FFAA; margin:3px 0; font-size:13px;'>• No major issues detected</p>"
-                    if not show_feedback else ""}
-                </div>
+                        # Pre-build the HTML pieces to avoid Markdown indentation bugs
+                        feedback_html = f"<p style='color:white; margin:0 0 10px; font-size:14px;'>{feedback}</p>" if show_feedback and feedback else ""
+                        
+                        if show_feedback and active_warnings:
+                            warnings_html = "".join([f"<p style='color:#FF6B6B; margin:3px 0; font-size:13px;'>• {w}</p>" for w in active_warnings])
+                        elif not show_feedback:
+                            warnings_html = "<p style='color:#00FFAA; margin:3px 0; font-size:13px;'>• No major issues detected</p>"
+                        else:
+                            warnings_html = ""
+
+                        # Push to the UI with zero leading spaces inside the string
+                        st.markdown(f"""
+            <div style='background:#1A1A1A; height: 300px; border-left: 4px solid {verdict_color}; padding:14px; border-radius:6px; margin-top:10px;'>
+                <p style='color:{verdict_color}; margin:0 0 8px; font-size:13px; font-weight:bold; letter-spacing:1px;'>{verdict_header}</p>
+                {feedback_html}
+                {warnings_html}
+            </div>
             """, unsafe_allow_html=True)
-        with graph_col:
-            st.markdown("**MY PROGRESS**")
-            df = pd.DataFrame({
-                "Date": ["Oct 7", "Oct 12", "Oct 19", "Oct 22", "Today"],
-                "Score": [25, 45, 95, 88, stats['score']]
-            })
-            fig = px.line(df, x="Date", y="Score", markers=True)
-            # ... (Your fig layout code)
-            st.plotly_chart(fig, use_container_width=True)
 
     # --- SHOW PLACEHOLDER IF NOT DONE YET ---
     else:
