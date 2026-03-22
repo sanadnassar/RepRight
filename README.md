@@ -1,4 +1,3 @@
-# RepRight
 # RepRight — AI Squat Form Analyser
 
 **DataQuest'26 Hackathon | Healthcare & Wellbeing Track**
