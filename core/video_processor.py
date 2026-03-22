@@ -38,17 +38,19 @@ class ScoreSmoother:
 # ─────────────────────────────────────────────
 #  UI HELPERS
 # ─────────────────────────────────────────────
-def get_score_colour(score):
-    if score >= 75:   return (0, 255, 100)   # Green
-    elif score >= 50: return (0, 200, 255)   # Yellow
-    else:             return (0, 60, 255)    # Red
+def get_score_colour(score, label=""):
+    if label == "ready":  return (180, 180, 180)  # gray
+    if label == "good":   return (0, 255, 100)     # green
+    if label == "average": return (0, 200, 255)    # yellow
+    if label == "bad":    return (0, 60, 255)      # red
+    return (180, 180, 180)  # fallback gray
 
 def get_pixel(landmark, w, h):
     return (int(landmark.x * w), int(landmark.y * h))
 
-def draw_skeleton(frame, landmarks, score):
+def draw_skeleton(frame, landmarks, score, label):
     h, w = frame.shape[:2]
-    colour = get_score_colour(score)
+    colour = get_score_colour(score, label)
     for start_idx, end_idx in CONNECTIONS:
         p1 = get_pixel(landmarks[start_idx], w, h)
         p2 = get_pixel(landmarks[end_idx], w, h)
@@ -61,7 +63,7 @@ def draw_skeleton(frame, landmarks, score):
 def draw_hud(frame, knee_angle, hip_angle, back_angle,
              label, score, rep_count, warnings):
     h, w = frame.shape[:2]
-    colour = get_score_colour(score)
+    colour = get_score_colour(score, label)
 
     # --- Left Panel: Main Stats ---
     overlay = frame.copy()
@@ -82,29 +84,9 @@ def draw_hud(frame, knee_angle, hip_angle, back_angle,
                     cv2.FONT_HERSHEY_SIMPLEX, sc, col, th, cv2.LINE_AA)
         y += 32
 
-    # --- Right Panel: Live Warnings (only shown during active squat) ---
-    if warnings:
-        panel_h = 35 + len(warnings) * 30
-        warn_overlay = frame.copy()
-        cv2.rectangle(warn_overlay, (w - 285, 10), (w - 10, 10 + panel_h), (0, 0, 40), -1)
-        cv2.addWeighted(warn_overlay, 0.7, frame, 0.3, 0, frame)
-
-        cv2.putText(frame, "!!! WARNINGS !!!", (w - 275, 35),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 255), 2, cv2.LINE_AA)
-        for i, warn in enumerate(warnings):
-            cv2.putText(frame, f"- {warn}", (w - 275, 65 + i * 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 60, 255), 1, cv2.LINE_AA)
 
 
-# ─────────────────────────────────────────────
-#  KNEE CAVE CHECK
-#  (Can't be in utils.py since it needs 2 angles)
-# ─────────────────────────────────────────────
 def detect_knee_cave(lm, k_ang):
-    """
-    Knees should be at least as wide as ankles.
-    If knees are 15% narrower than ankles during squat = caving.
-    """
     knee_width  = abs(lm[25].x - lm[26].x)
     ankle_width = abs(lm[27].x - lm[28].x)
     return knee_width < ankle_width * 0.85 and k_ang < 130
@@ -163,7 +145,15 @@ def process_video(video_file, exercise, progress_callback):
     reasons         = []
     latest_feedback = ""
     smoother        = ScoreSmoother(window=10)
+    
+    frames_in_squat = 0
+    SQUAT_WARMUP = 6  
 
+    locked_label = "ready"
+    locked_score = 50
+
+    good_reps = 0
+    confidence_scores = []
     # ── Frame Loop ──
     while cap.isOpened():
         ret, frame = cap.read()
@@ -218,20 +208,23 @@ def process_video(video_file, exercise, progress_callback):
             if k_ang < DEPTH_THRESHOLD and rep_state == "up":
                 rep_state = "down"
                 latest_feedback = get_feedback(k_ang, h_ang, b_ang, label)
+                locked_label = label
+                locked_score = score
 
             elif k_ang > DEPTH_THRESHOLD and rep_state == "down":
                 rep_state = "up"
                 rep_count += 1
-
-                # Save this rep's average score
                 if current_rep_scores:
                     rep_avg = int(sum(current_rep_scores) / len(current_rep_scores))
                     rep_scores.append(rep_avg)
                     current_rep_scores = []
+                # Count as good rep if minimum depth was reached this rep
+                if min(knee_angles[-20:]) < 95:  # check last 20 frames for depth
+                    good_reps += 1
 
             # ── 5. ACTIVE REP GUARD ──
             # Only score/track when person is actually squatting
-            if k_ang < 165:
+            if k_ang < 145:
                 label, raw_score, confidence, reasons = predict_form(
                     knee_angle   = k_ang,
                     hip_angle    = h_ang,
@@ -244,14 +237,28 @@ def process_video(video_file, exercise, progress_callback):
 
                 # Smooth score to prevent flickering
                 score = smoother.update(raw_score)
+                frames_in_squat += 1
+
+                if frames_in_squat <= SQUAT_WARMUP or k_ang > 110:
+                    label = "ready"
+                elif rep_state == "down":
+                    if score >= 80:   label = "good"
+                    elif score >= 60: label = "average"
+                    else:             label = "bad"
+                else:
+                    # Ascending — hold locked label
+                    label = locked_label
+                    score = locked_score
 
                 # Update trackers
-                total_person_frames += 1
-                all_scores.append(score)
+                if label != "ready":
+                    total_person_frames += 1
+                if label != "ready":
+                    all_scores.append(score)
+                    confidence_scores.append(confidence)
                 knee_angles.append(k_ang)
                 back_angles.append(b_ang)
                 current_rep_scores.append(score)
-                latest_feedback = get_feedback(k_ang, h_ang, b_ang, label)
 
                 if label == "good":
                     good_frames += 1
@@ -262,11 +269,16 @@ def process_video(video_file, exercise, progress_callback):
                         warning_counts[reason] += 1
 
             else:
-                # Clear warnings when standing — don't show stale alerts
+                label = "ready"
+                score = 50
                 reasons = []
+                frames_in_squat = 0
+                locked_label = "ready"
+                locked_score = 50
+                smoother.window.clear()
 
             # ── 6. DRAW ──
-            draw_skeleton(frame, lm, score)
+            draw_skeleton(frame, lm, score, label)
             draw_hud(frame, k_ang, h_ang, b_ang, label, score, rep_count, reasons)
 
         out.write(frame)
@@ -288,14 +300,34 @@ def process_video(video_file, exercise, progress_callback):
     if warning_counts[most_common_issue] == 0:
         most_common_issue = "None — Great Form!"
 
+    avg_confidence = int((sum(confidence_scores) / len(confidence_scores)) * 100) if confidence_scores else 0
+    avg_knee_at_depth = int(min(knee_angles)) if knee_angles else 0
+
+    if avg_knee_at_depth < 90:
+        depth_label = "Ideal"
+    elif avg_knee_at_depth < 105:
+        depth_label = "Too shallow"
+    else:
+        depth_label = "No depth"
+
+    if avg_score >= 75:
+        verdict = "Good"
+    elif avg_score >= 55:
+        verdict = "Decent"
+    else:
+        verdict = "Bad"
+
     return output_path, {
-        "score":        avg_score,
-        "reps":         rep_count,
-        "good_pct":     f"{good_pct}%",
-        "depth":        f"{depth_pct}%",          # From Aref ✅
-        "consistency":  f"{consistency}° std",    # From Aref ✅
-        "rep_scores":   rep_scores,               # Per-rep breakdown ✅
-        "issue":        most_common_issue,        # Biggest problem ✅
-        "all_warnings": warning_counts,           # Full warning breakdown ✅
-        "feedback":     latest_feedback,
+        "score":          avg_score,
+        "verdict":        verdict,
+        "total_reps":     rep_count,
+        "good_reps":      good_reps,
+        "depth_pct":      f"{depth_pct}%",
+        "depth_angle":    f"{avg_knee_at_depth}°",
+        "depth_label":    depth_label,
+        "avg_confidence": f"{avg_confidence}%",
+        "rep_scores":     rep_scores,
+        "issue":          most_common_issue,
+        "all_warnings":   warning_counts,
+        "feedback":       latest_feedback,
     }

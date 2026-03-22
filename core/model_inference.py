@@ -58,12 +58,7 @@ def predict_form(knee_angle, hip_angle, back_angle,
 
     # 4. FINAL LABEL RE-EVALUATION
     # If the penalties drag the score down, the form is no longer "good"
-    if score < 65:
-        label = "bad"
-    elif score < 80:
-        label = "average"
-    else:
-        label = "good"
+    
 
     # Clamp score between 0 and 100
     final_score = max(0, min(100, score))

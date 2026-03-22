@@ -329,11 +329,11 @@ with right_col:
         
         # 1. Top Metrics Row
         met_col1, met_col2, met_col3, met_col4, met_col5 = st.columns(5)
-        met_col1.metric("AVG SCORE", f"{stats['score']}/100")
-        met_col2.metric("REPS", stats["reps"])
-        met_col3.metric("GOOD FORM", stats["good_pct"])
-        met_col4.metric("DEPTH",        stats["depth"])
-        met_col5.metric("CONSISTENCY",  stats["consistency"])
+        met_col1.metric("AVG SCORE",   f"{stats['score']}/100")
+        met_col2.metric("VERDICT",     stats['verdict'])
+        met_col3.metric("REPS",        f"{stats['good_reps']}/{stats['total_reps']}")
+        met_col4.metric("DEPTH",       f"{stats['depth_pct']} · {stats['depth_label']}")
+        met_col5.metric("CONFIDENCE",  stats["avg_confidence"])
         
         vid_col, graph_col = st.columns([1.5, 1])
         with vid_col:            
@@ -347,19 +347,39 @@ with right_col:
             
             st.markdown("**SESSION NOTES**")
             st.markdown(f"<span style='color:gray; font-size:14px;'>Exercise: {squat_type}</span>", unsafe_allow_html=True)
-            feedback = stats.get("feedback", "")
-            if feedback:
-                st.markdown(f"""
-                    <div style='background:#1A1A1A; border-left: 4px solid #00FFFF; 
-                                padding:12px; border-radius:6px; margin-top:10px;'>
-                        <p style='color:#00FFFF; margin:0; font-size:13px; 
-                                font-weight:bold;'>OVERALL VERDICT</p>
-                        <p style='color:white; margin:4px 0 0; font-size:14px;'>
-                            {feedback}
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+            verdict   = stats.get("verdict", "")
+            feedback  = stats.get("feedback", "")
+            warnings  = stats.get("all_warnings", {})
+            active_warnings = [k for k, v in warnings.items() if v > 0]
 
+            if verdict == "Good":
+                verdict_color = "#00FFAA"
+                verdict_header = "GOOD FORM"
+                show_feedback = False
+            elif verdict == "Decent":
+                verdict_color = "#FFD700"
+                verdict_header = "DECENT — NEEDS WORK"
+                show_feedback = True
+            else:
+                verdict_color = "#FF6B6B"
+                verdict_header = "BAD — NEEDS WORK"
+                show_feedback = True
+
+            st.markdown(f"""
+                <div style='background:#1A1A1A; border-left: 4px solid {verdict_color};
+                            padding:14px; border-radius:6px; margin-top:10px;'>
+                    <p style='color:{verdict_color}; margin:0 0 8px; font-size:13px;
+                            font-weight:bold; letter-spacing:1px;'>{verdict_header}</p>
+                    {f"<p style='color:white; margin:0 0 10px; font-size:14px;'>{feedback}</p>" 
+                    if show_feedback and feedback else ""}
+                    {"".join([
+                        f"<p style='color:#FF6B6B; margin:3px 0; font-size:13px;'>• {w}</p>"
+                        for w in active_warnings
+                    ]) if show_feedback and active_warnings else
+                    "<p style='color:#00FFAA; margin:3px 0; font-size:13px;'>• No major issues detected</p>"
+                    if not show_feedback else ""}
+                </div>
+            """, unsafe_allow_html=True)
         with graph_col:
             st.markdown("**MY PROGRESS**")
             df = pd.DataFrame({

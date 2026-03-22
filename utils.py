@@ -56,9 +56,9 @@ def get_feedback(knee_angle, hip_angle, back_angle, label):
     if label == "good":
         verdict = "Solid rep"
     else:
-        verdict = "Needs work"
+        verdict = ""
 
-    return verdict + " | " + " | ".join(feedback)
+    return verdict + " | ".join(feedback)
 
 
 def detect_heel_lift(landmarks):
