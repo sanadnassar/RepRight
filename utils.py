@@ -50,7 +50,7 @@ def get_feedback(knee_angle, hip_angle, back_angle, label):
     elif hip_angle < 110:
         feedback.append("Hips need to drop lower")
     else:
-        feedback.append("Hips too high — this is a good morning, not a squat")
+        feedback.append("Hips too high")
 
     # overall verdict
     if label == "good":
