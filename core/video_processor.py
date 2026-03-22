@@ -6,9 +6,9 @@ from collections import deque
 from utils import calculate_angle, get_feedback, detect_heel_lift, detect_back_rounding
 from core.model_inference import predict_form
 
-# ─────────────────────────────────────────────
+
 #  MEDIAPIPE SETUP
-# ─────────────────────────────────────────────
+#------------------
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
     min_detection_confidence=0.3,
@@ -17,7 +17,7 @@ pose = mp_pose.Pose(
     smooth_landmarks=True
 )
 
-# Added feet connections (27-32) for full lower body skeleton
+#feet skeleton added
 CONNECTIONS = [
     (11, 12), (11, 23), (12, 24), (23, 24),
     (23, 25), (25, 27), (24, 26), (26, 28),
@@ -25,9 +25,8 @@ CONNECTIONS = [
 ]
 KEY_JOINTS = [11, 12, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 
-# ─────────────────────────────────────────────
-#  SCORE SMOOTHER — Prevents flickering scores
-# ─────────────────────────────────────────────
+# Score smoother prevents skeleton getting interrupted
+#-----------------------------------------------------
 class ScoreSmoother:
     def __init__(self, window=10):
         self.window = deque(maxlen=window)
@@ -36,9 +35,8 @@ class ScoreSmoother:
         self.window.append(score)
         return int(sum(self.window) / len(self.window))
 
-# ─────────────────────────────────────────────
-#  UI HELPERS
-# ─────────────────────────────────────────────
+#UI Helpers
+#-----------
 def get_score_colour(score, label=""):
     if label == "ready":  return (180, 180, 180)  # gray
     if label == "good":   return (0, 255, 100)     # green
@@ -66,7 +64,8 @@ def draw_hud(frame, knee_angle, hip_angle, back_angle,
     h, w = frame.shape[:2]
     colour = get_score_colour(score, label)
 
-    # --- Left Panel: Main Stats ---
+    #left/main panel above video
+    #-----------------------------
     overlay = frame.copy()
     cv2.rectangle(overlay, (10, 10), (300, 195), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
@@ -94,9 +93,8 @@ def detect_knee_cave(lm, k_ang):
 
 
 
-# ─────────────────────────────────────────────
-#  MAIN VIDEO PROCESSOR
-# ─────────────────────────────────────────────
+# Main Video processor
+#-------------------------
 def process_video(video_file, exercise, progress_callback):
 
 
@@ -105,7 +103,7 @@ def process_video(video_file, exercise, progress_callback):
 
     progress_callback(5, "Initializing analysis engine...")
 
-    # Write uploaded file to temp location
+    # write uploaded file to temp location
     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tfile:
         tfile.write(video_file.read())
         input_path = tfile.name
@@ -127,7 +125,7 @@ def process_video(video_file, exercise, progress_callback):
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
     out    = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
-    # ── Trackers ──
+    #Trackers 
     DEPTH_THRESHOLD    = 95          # Knee angle that counts as "at depth"
     rep_count          = 0
     rep_state          = "up"
@@ -141,7 +139,7 @@ def process_video(video_file, exercise, progress_callback):
     rep_scores         = []          # Average score per completed rep
     current_rep_scores = []          # Buffer for current rep
 
-    # Warning frequency — for final report
+    # Warning frequencyfor final report
     warning_counts = {
         "HEELS LIFTED": 0,
         "KNEES CAVING": 0,
@@ -149,7 +147,7 @@ def process_video(video_file, exercise, progress_callback):
         "LOW DEPTH":    0,
     }
 
-    # Defaults — so draw functions don't crash on first frame
+    # Defaults so draw functions dont crash on first frame
     label           = "ready"
     score           = 50
     reasons         = []
@@ -171,7 +169,7 @@ def process_video(video_file, exercise, progress_callback):
 
     consecutive_no_detection = 0
     MAX_NO_DETECTION_FRAMES = int(fps * 2)
-    # ── Frame Loop ──
+    #frame Loop
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -188,7 +186,7 @@ def process_video(video_file, exercise, progress_callback):
         if results.pose_landmarks:
             lm = results.pose_landmarks.landmark
             consecutive_no_detection = 0
-            # ── 1. LANDMARK EXTRACTION ──
+            #landmark extraction
             l_sh    = [lm[11].x, lm[11].y]
             r_sh    = [lm[12].x, lm[12].y]
             l_hip   = [lm[23].x, lm[23].y]
@@ -198,7 +196,7 @@ def process_video(video_file, exercise, progress_callback):
             l_ankle = [lm[27].x, lm[27].y]
             r_ankle = [lm[28].x, lm[28].y]
 
-            # ── 2. ANGLE CALCULATIONS ──
+            #angle acalculation
             l_k_ang = calculate_angle(l_hip, l_knee, l_ankle)
             r_k_ang = calculate_angle(r_hip, r_knee, r_ankle)
             k_ang   = (l_k_ang + r_k_ang) / 2
@@ -214,14 +212,14 @@ def process_video(video_file, exercise, progress_callback):
                 l_knee
             )
 
-            # ── 3. BIOMECHANICAL FLAGS ──
-            # Using Aref's utility functions where possible, inline where not
-            heel_lifted  = detect_heel_lift(lm)        # From utils.py
-            back_rounded = detect_back_rounding(lm)    # From utils.py
+            #biomechanical flags
+            # using utils functions
+            heel_lifted  = detect_heel_lift(lm)
+            back_rounded = detect_back_rounding(lm)
             knee_caving  = detect_knee_cave(lm, k_ang) # Local — needs k_ang
             low_depth    = k_ang > 105                 # Not deep enough
 
-            # ── 4. REP STATE MACHINE ──
+            #rep state machine
             if k_ang < DEPTH_THRESHOLD and rep_state == "up":
                 rep_state = "down"
                 latest_feedback = get_feedback(k_ang, h_ang, b_ang, label)
@@ -239,8 +237,8 @@ def process_video(video_file, exercise, progress_callback):
                 if knee_angles and min(knee_angles[-20:]) < 95: # check last 20 frames for depth
                     good_reps += 1
 
-            # ── 5. ACTIVE REP GUARD ──
-            # Only score/track when person is actually squatting
+            # Active Rep guard
+            #only score/track when person is actually squatting
             if k_ang < 145:
                 label, raw_score, confidence, reasons = predict_form(
                     knee_angle   = k_ang,
@@ -263,7 +261,7 @@ def process_video(video_file, exercise, progress_callback):
                     elif score >= 60: label = "average"
                     else:             label = "bad"
                 else:
-                    # Ascending — hold locked label
+                    # Ascending hold locked label
                     label = locked_label
                     score = locked_score
 
@@ -316,7 +314,7 @@ def process_video(video_file, exercise, progress_callback):
     cap.release()
     out.release()
 
-    # ── FINAL STATS ──
+    # Final stats
     avg_score   = int(sum(all_scores) / len(all_scores)) if all_scores else 0
     good_pct    = int((good_frames / total_person_frames) * 100) if total_person_frames > 0 else 0
 
